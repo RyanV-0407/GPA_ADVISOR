@@ -68,8 +68,6 @@ The application will launch in your default web browser at `http://localhost:850
 ## 👨‍🎓 Author Information
 
 - **Name:** Vikram Singh Rathour
-- **Registration No:** 12324502
-- **Course:** CSE476 – Agentic AI & Intelligent Automation
 - **GitHub:** [RyanV-0407](https://github.com/RyanV-0407)
 
 ---
