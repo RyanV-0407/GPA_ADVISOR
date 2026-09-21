@@ -16,6 +16,8 @@
 
 **GPA Advisor Agent** is an intelligent automation tool designed to help students track, calculate, and project their academic trajectory using a deterministic, memory-aware AI. By combining the natural language understanding of a Large Language Model (LLM) with strict mathematical tools, it provides highly accurate advice for academic planning.
 
+**🔗 Live Demo:** [https://gpa-advisor.streamlit.app/](https://gpa-advisor.streamlit.app/)
+
 ## ✨ Features
 
 - **Deterministic Math Engine:** Resolves the common LLM hallucination issue in arithmetic. It relies on deterministic Python tools like `add_grade(course, grade, credits)` and `compute_gpa()` to calculate exact credit-weighted GPAs based on the 10-point scale (O=10 to F=0).
