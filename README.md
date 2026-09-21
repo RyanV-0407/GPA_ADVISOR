@@ -8,6 +8,9 @@
   [![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
   [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
   [![Plotly](https://img.shields.io/badge/Plotly-239120?style=for-the-badge&logo=plotly&logoColor=white)](https://plotly.com/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+  **[🔗 Try the Live Demo!](https://gpa-advisor.streamlit.app/)**
 </div>
 
 ---
@@ -16,14 +19,16 @@
 
 **GPA Advisor Agent** is an intelligent automation tool designed to help students track, calculate, and project their academic trajectory using a deterministic, memory-aware AI. By combining the natural language understanding of a Large Language Model (LLM) with strict mathematical tools, it provides highly accurate advice for academic planning.
 
-**🔗 Live Demo:** [https://gpa-advisor.streamlit.app/](https://gpa-advisor.streamlit.app/)
+---
 
-## ✨ Features
+## ✨ Key Features
 
-- **Deterministic Math Engine:** Resolves the common LLM hallucination issue in arithmetic. It relies on deterministic Python tools like `add_grade(course, grade, credits)` and `compute_gpa()` to calculate exact credit-weighted GPAs based on the 10-point scale (O=10 to F=0).
-- **Session Memory Tracking:** Powered by the `GPAMemory` class, the agent persistently stores recorded courses, grades, and credits across multi-turn dialogues. You don't need to repeat your transcript every time you ask a question.
-- **Target GPA Feasibility Check:** The agent calculates whether ambitious target GPAs are mathematically possible based on your current standing and remaining credits, returning explicit statuses (e.g., `ACHIEVABLE` or `Mathematically IMPOSSIBLE`).
-- **Interactive UI:** A beautifully designed Streamlit interface employing classical academic iconography (Oxford Paper & Cambridge Chalkboard themes).
+- 🧮 **Deterministic Math Engine:** Resolves the common LLM hallucination issue in arithmetic. It relies on deterministic Python tools like `add_grade(course, grade, credits)` and `compute_gpa()` to calculate exact credit-weighted GPAs based on the 10-point scale (O=10 to F=0).
+- 🧠 **Session Memory Tracking:** Powered by the `GPAMemory` class, the agent persistently stores recorded courses, grades, and credits across multi-turn dialogues. You don't need to repeat your transcript every time you ask a question!
+- 🎯 **Target GPA Feasibility Check:** The agent calculates whether ambitious target GPAs are mathematically possible based on your current standing and remaining credits, returning explicit statuses (e.g., `ACHIEVABLE` or `Mathematically IMPOSSIBLE`).
+- 🎨 **Interactive UI:** A beautifully designed Streamlit interface employing classical academic iconography (Oxford Paper & Cambridge Chalkboard themes).
+
+---
 
 ## 🛠️ Architecture: THINK ➔ ACT ➔ OBSERVE
 
@@ -32,10 +37,11 @@ The system forces the agent to ground its final advice strictly on verifiable to
 2. **Session State Storage:** Holds historical course data, enabling long-term reasoning.
 3. **Deterministic Feasibility Checks:** Offloads grade capability checks strictly to Python calculations, ensuring no false encouragement is given.
 
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - Python 3.8 or higher
 - Pip package manager
 
@@ -53,7 +59,7 @@ The system forces the agent to ground its final advice strictly on verifiable to
    ```
 
 3. **Set up environment variables:**
-   Create a `.env` file in the root directory for any required API keys (e.g. LLM configuration).
+   Create a `.env` file in the root directory for any required API keys (e.g., `GROQ_API_KEY`, `PROVIDER`).
 
 ### Usage
 
@@ -62,13 +68,23 @@ Run the Streamlit application from your terminal:
 ```bash
 streamlit run app.py
 ```
-
 The application will launch in your default web browser at `http://localhost:8501`.
+
+**💬 Example prompts you can ask the agent:**
+- *"I got an A in Data Structures (4 credits). Add it to my transcript."*
+- *"What is my current GPA?"*
+- *"I have 20 credits left. Can I reach a 9.0 GPA if my current GPA is 8.5 over 60 credits?"*
+
+---
 
 ## 👨‍🎓 Author Information
 
 - **Name:** Vikram Singh Rathour
 - **GitHub:** [RyanV-0407](https://github.com/RyanV-0407)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
