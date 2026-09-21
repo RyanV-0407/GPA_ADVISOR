@@ -1,0 +1,245 @@
+"""
+The four lanes.
+
+One socket, four plugs. Every practical in CSE476 imports get_client() from
+here and never has to care which provider is actually behind it.
+
+    from cse476.lanes import get_client, MODEL
+    client = get_client()
+    reply = client.chat.completions.create(model=MODEL, messages=[...])
+
+Change PROVIDER in your .env file. Change nothing else.
+
+WHY this file exists at all:
+The OpenAI Python SDK talks to any service that speaks the OpenAI chat
+completions protocol. Microsoft Foundry, GitHub Models, Groq and Ollama all
+speak it. So the only thing that varies between lanes is the base URL, the
+credential, and the model name. That is exactly three values, so that is
+exactly what this module resolves.
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+
+class LaneError(RuntimeError):
+    """Raised when a lane is selected but not configured. Message tells you the fix."""
+
+
+@dataclass(frozen=True)
+class Lane:
+    key: str
+    name: str
+    base_url: str | None
+    key_env: str
+    default_model: str
+    free: bool
+    note: str
+    retired: bool = False
+
+
+# WHY: keeping the lane table as data rather than if/elif means setup_check.py
+# can iterate over it and report on every lane without duplicating knowledge.
+LANES: dict[str, Lane] = {
+    "foundry": Lane(
+        key="foundry",
+        name="Microsoft Foundry",
+        # The v1 surface is OpenAI-compatible, so this lane uses the plain
+        # OpenAI client with a base_url, exactly like github and groq. No
+        # AzureOpenAI class, no api_version. Set AZURE_OPENAI_ENDPOINT to the
+        # resource's v1 base, ending in /openai/v1/.
+        base_url=None,  # resolved from AZURE_OPENAI_ENDPOINT
+        key_env="AZURE_OPENAI_API_KEY",
+        default_model="chat-demo",  # your DEPLOYMENT name, not the model name
+        free=False,
+        note="Formerly called Azure AI Foundry. Renamed January 2026.",
+    ),
+    "github": Lane(
+        key="github",
+        name="GitHub Models (retired)",
+        base_url="https://models.github.ai/inference",
+        key_env="GITHUB_TOKEN",
+        default_model="openai/gpt-4.1-mini",
+        free=True,
+        note="RETIRED by GitHub on 30 July 2026. Use groq or local instead.",
+        retired=True,
+    ),
+    "groq": Lane(
+        key="groq",
+        name="Groq",
+        base_url="https://api.groq.com/openai/v1",
+        key_env="GROQ_API_KEY",
+        default_model="openai/gpt-oss-20b",
+        free=True,
+        note="Free default for this course. Fast. Get a key at console.groq.com/keys.",
+    ),
+    "local": Lane(
+        key="local",
+        name="Ollama, on your own machine",
+        base_url="http://localhost:11434/v1",
+        key_env="",  # Ollama needs no key
+        default_model="llama3.2",
+        free=True,
+        note="Free, no key, no rate limit, never down, and slower than everything else.",
+    ),
+}
+
+PROVIDER: str = os.getenv("PROVIDER", "groq").strip().lower()
+
+
+def _lane(provider: str | None = None) -> Lane:
+    key = (provider or PROVIDER).strip().lower()
+    if key not in LANES:
+        raise LaneError(
+            f"PROVIDER is set to '{key}', which is not a lane.\n"
+            f"Valid values: {', '.join(k for k in LANES if not LANES[k].retired)}\n"
+            f"Fix: edit PROVIDER in your .env file."
+        )
+    lane = LANES[key]
+    if lane.retired:
+        raise LaneError(
+            f"The '{key}' lane ({lane.name}) is no longer available.\n"
+            f"GitHub retired GitHub Models on 30 July 2026, so this lane now "
+            f"returns a 410 error and cannot be used.\n"
+            f"Switch to a free lane instead: set PROVIDER=groq (get a key at "
+            f"console.groq.com/keys) or PROVIDER=local (run Ollama on your own "
+            f"machine, no key needed). Foundry also works if you have Azure."
+        )
+    return lane
+
+
+def get_model(provider: str | None = None) -> str:
+    """Model name for the active lane. MODEL in .env overrides the default.
+
+    MODEL is a hard override that applies to whichever lane is active. It exists
+    mainly for Foundry, where the model name must be your deployment name. If you
+    set it for Foundry and later switch to a free lane without unsetting it, the
+    Foundry deployment name leaks through and the free lane returns a confusing
+    404. We catch the common shape of that mistake and say so plainly.
+    """
+    override = os.getenv("MODEL", "").strip()
+    if not override:
+        return _lane(provider).default_model
+
+    lane = _lane(provider)
+    # A Groq model name is namespaced or hyphenated in a known way. A bare
+    # Foundry deployment name like "chat-demo" almost never fits that, so if it
+    # is set on a free lane, it is almost certainly a leftover after switching.
+    if lane.key in ("github", "groq") and "/" not in override and override.count("-") <= 1:
+        raise LaneError(
+            f"MODEL={override!r} is set in your .env, but you are on the "
+            f"'{lane.key}' lane, which does not have a model by that name.\n"
+            f"This usually means MODEL was set for the Foundry lane and left "
+            f"behind after switching. Comment out or delete the MODEL line in "
+            f".env so the '{lane.key}' lane uses its default "
+            f"({lane.default_model}), or set MODEL to a valid {lane.key} model."
+        )
+    return override
+
+
+def get_client(provider: str | None = None) -> OpenAI:
+    """
+    Return a configured client for the active lane.
+
+    Raises LaneError with an actionable message rather than a stack trace,
+    because the person reading it is usually a student at 11pm.
+    """
+    lane = _lane(provider)
+
+    if lane.key == "foundry":
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
+        api_key = os.getenv(lane.key_env, "").strip()
+        if not endpoint or not api_key:
+            raise LaneError(
+                "Lane A (Microsoft Foundry) is selected but not configured.\n"
+                "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY in .env.\n"
+                "The endpoint must end in /openai/v1/, for example\n"
+                "  https://your-resource.openai.azure.com/openai/v1/\n"
+                "No Azure access? Set PROVIDER=groq instead. It is free "
+                "(get a key at console.groq.com/keys), or PROVIDER=local to "
+                "run Ollama on your own machine. Every practical runs on them."
+            )
+        # WHY the plain OpenAI client and not AzureOpenAI: the Foundry v1 surface
+        # is OpenAI-compatible, so the same client that talks to github and groq
+        # talks to Foundry. The only Foundry-specific rule is that MODEL must be
+        # your DEPLOYMENT name (chat-demo), not the underlying model name.
+        # We normalise the endpoint so a trailing slash or a stray operation
+        # path pasted from the portal does not break the base_url.
+        base = endpoint
+        for suffix in ("/responses", "/chat/completions", "/completions"):
+            if base.rstrip("/").endswith(suffix):
+                base = base.rstrip("/")[: -len(suffix)]
+        if not base.rstrip("/").endswith("/openai/v1"):
+            base = base.rstrip("/") + "/openai/v1"
+        base = base.rstrip("/") + "/"
+        return OpenAI(
+            base_url=base, api_key=api_key, timeout=60.0, max_retries=3
+        )
+
+    if lane.key == "local":
+        # WHY: Ollama ignores the key entirely, but the SDK requires a non-empty
+        # string, so we pass a placeholder rather than making students set one.
+        return OpenAI(
+            base_url=lane.base_url, api_key="ollama", timeout=180.0, max_retries=1
+        )
+
+    api_key = os.getenv(lane.key_env, "").strip()
+    if not api_key:
+        raise LaneError(
+            f"Lane '{lane.key}' ({lane.name}) is selected but {lane.key_env} is not set.\n"
+            f"Fix: add {lane.key_env}=... to your .env file.\n"
+            f"See docs/LANES.md for where to get one."
+        )
+    return OpenAI(
+        base_url=lane.base_url, api_key=api_key, timeout=60.0, max_retries=3
+    )
+
+
+def get_connection(provider: str | None = None) -> tuple[str, str, str]:
+    """
+    Return (base_url, api_key, model) for the active lane, resolved and validated.
+
+    This exists for the Agent Framework path, which builds its own
+    OpenAIChatClient rather than the plain OpenAI client from get_client, but
+    still needs the same lane-aware base_url, key, and model. Routing it through
+    here means the Agent Framework code never hardcodes a provider, so when a
+    provider is retired (as GitHub Models was on 30 July 2026) nothing in the
+    framework modules has to change. It reuses get_client so the endpoint
+    normalisation and the actionable error messages stay in exactly one place.
+    """
+    client = get_client(provider)
+    base_url = str(client.base_url)
+    api_key = client.api_key
+    return base_url, api_key, get_model(provider)
+
+
+def _model_for_display() -> str:
+    """Module-level MODEL value that never raises on import.
+
+    The mismatch check in get_model is useful at call time, but it must not make
+    'import cse476.lanes' fail, or notebooks that import MODEL break before they
+    can even show the helpful message. So the constant below tolerates a bad
+    override; the clear error still surfaces the moment get_model or get_client
+    is actually called.
+    """
+    try:
+        return get_model()
+    except LaneError:
+        return os.getenv("MODEL", "").strip() or "unset"
+
+
+MODEL: str = _model_for_display()
+
+
+def describe() -> str:
+    """One line describing the active lane. Print this at the top of a notebook."""
+    lane = _lane()
+    tag = "free" if lane.free else "billed"
+    return f"Lane: {lane.name} ({lane.key}, {tag})  |  Model: {get_model()}"
