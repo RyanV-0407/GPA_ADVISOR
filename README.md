@@ -14,7 +14,7 @@
 
 ## 📖 Overview
 
-**GPA Advisor Agent (Topic T28)** is an intelligent automation tool designed to help students track, calculate, and project their academic trajectory using a deterministic, memory-aware AI. By combining the natural language understanding of a Large Language Model (LLM) with strict mathematical tools, it provides highly accurate advice for academic planning.
+**GPA Advisor Agent** is an intelligent automation tool designed to help students track, calculate, and project their academic trajectory using a deterministic, memory-aware AI. By combining the natural language understanding of a Large Language Model (LLM) with strict mathematical tools, it provides highly accurate advice for academic planning.
 
 This project was built for **CSE476 – Agentic AI & Intelligent Automation**.
 
